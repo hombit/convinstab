@@ -76,10 +76,10 @@ def dlogt_dlogp(t, p):
 
 class FindPi(object):
     '''
-    Solver of the system of dimensionless vertical structure ODE similar to the
-    system in Ketsaris, Shakura (1998) (KS1998). The system contains four
+    Solver of the system of dimensionless vertical structure ODEs similar to
+    the system in Ketsaris, Shakura (1998) (KS1998). The system contains four
     linear differential equations for four unknown variables: pressure,
-    vertical coordinate z, flux of energy and temperature. The only argument if
+    vertical coordinate z, flux of energy and temperature. The only argument is
     dimensionless mass coordinate sigma. The system contains eight first-type
     boundary conditions (two for each function) and four unknown parameters
     `Pi`. These unknown parameters depend on one free parameter `tau`. The
@@ -92,27 +92,28 @@ class FindPi(object):
     tau : positive float
         Free parameter of the problem.
     Pi0 : array_like, optional
-        Initial guess.
+        Initial guess. Default is typical values from KS1998.
     reverse : bool, optional
         Specifies direction of ODE integration. If False than integrate from
         `sigma` = 0 to `sigma` = 1 (from plane of symmetry to photosphere), if
-        True than in opposite direction. True is default and show better
-        divergence of optimization procedure.
+        True than in opposite direction. True is default and usually shows
+        better divergence of optimization process.
     heating : str, optional
         Type of heating in the disc. Should be one of ``alpha`` or
         ``microvisc``.
             - 'alpha' describes Shakura-Syunyaev alpha-disc, dq/dsigma ~ t.
-            - 'microvisc' describes heating by microscopic viscosity,
-            dq/dsigma ~ t**3.5/p
+            - 'microvisc' describes heating by microscopic ion viscosity,
+            dq/dsigma ~ t**3.5/p.
     transfer : str, optional
-        Type of transfer in the disc. Should be one of ``ff`` or `thompson`.
-            - 'ff' describes Kramer's law of free-free opacity
-            - 'thompson' describes Thompson's scattering
+        Type of energy transfer in the disc. Should be one of ``ff`` or
+        `thompson`.
+            - 'ff' describes Kramer's law of free-free opacity.
+            - 'thompson' describes Thompson's scattering.
 
     Attributes
-    ---------
+    ----------
     Pi : array or None
-        The result of solution. None for fresh object
+        The main result of calculations. None for fresh object
 
     Methods
     -------
@@ -123,6 +124,11 @@ class FindPi(object):
         Distribution of unknown functions of the sigma mesh with n points
     plot_mesh(n=1000, filename=None)
         Plot distributions of various functions to the file
+
+    Notes
+    -----
+    Optimization problem is solved with the same bounds (0.1, 10) for all of
+    four parameters Pi.
     '''
 
     __Pi = None
@@ -233,7 +239,7 @@ class FindPi(object):
 
     def _y1(self, Pi):
         '''
-        Right boundary conditions. Look KS1998
+        Right boundary conditions. See KS1998
 
         Parameters
         ----------
@@ -333,7 +339,7 @@ class FindPi(object):
 
     def mesh(self, n=1000):
         '''
-        Distribution of unknown functions of the sigma mesh with n points.
+        Distribution of unknown functions of the sigma mesh with `n` points.
 
         Parameters
         ----------
@@ -358,7 +364,7 @@ class FindPi(object):
     def plot_mesh(self, n=1000, filename=None):
         '''
         Plot distributions of various functions to the file.
-        This method plots all unknown functions and normalized entropy `s` and
+        This method plots all unknown functions, normalized entropy `s` and
         derivative d log(t) / d log(p).
 
         Parameters
