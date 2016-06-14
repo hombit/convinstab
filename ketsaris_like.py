@@ -94,21 +94,27 @@ class FindPi(object):
     Pi0 : array_like, optional
         Initial guess. Default is typical values from KS1998.
     reverse : bool, optional
-        Specifies direction of ODE integration. If False than integrate from
+        Specifies direction of ODEs integration. If False than integrate from
         `sigma` = 0 to `sigma` = 1 (from plane of symmetry to photosphere), if
         True than in opposite direction. True is default and usually shows
         better divergence of optimization process.
     heating : str, optional
-        Type of heating in the disc. Should be one of ``alpha`` or
-        ``microvisc``.
+        Type of heating in the disc. Should be one of
+        
             - 'alpha' describes Shakura-Syunyaev alpha-disc, dq/dsigma ~ t.
+            - 'const' describes constant energy generation per unit mass,
+              dq/dsigma ~ 1.
             - 'microvisc' describes heating by microscopic ion viscosity,
-            dq/dsigma ~ t**3.5/p.
+              dq/dsigma ~ t**3.5/p.
+        
+        Default is ``alpha``.
     transfer : str, optional
-        Type of energy transfer in the disc. Should be one of ``ff`` or
-        `thompson`.
+        Type of energy transfer in the disc. Should be one of
+        
             - 'ff' describes Kramer's law of free-free opacity.
             - 'thompson' describes Thompson's scattering.
+         
+         Default is ``ff``.
 
     Attributes
     ----------
@@ -200,7 +206,7 @@ class FindPi(object):
 
     def _derivatives(self, y, sigma, Pi):
         '''
-        Right side of ODE. Look KS1998 for heating == 'alpha'
+        Right side of ODEs. See KS1998 for heating 'alpha' or 'const'
 
         Parameters
         ----------
@@ -223,6 +229,8 @@ class FindPi(object):
         
         if self.__heating == 'alpha':
             dy[Vars.q] = Pi[2] * y[Vars.t]
+        elif self.__heating == 'const':
+            dy[Vars.q] = Pi[2]
         elif self.__heating == 'microvisc':
             dy[Vars.q] = Pi[2] * y[Vars.t]**3.5 / y[Vars.p]
         else:
@@ -267,7 +275,7 @@ class FindPi(object):
 
     def _integrate(self, Pi, sigma=None):
         '''
-        Integrate ODE and returns values at pints described in `sigma`
+        Integrate ODEs and returns values at pints described in `sigma`
 
         Parameters
         ----------
@@ -402,7 +410,12 @@ class FindPi(object):
         plt.plot(sigma, ys[:,Vars.z], label=r'$z$')
         plt.plot(sigma, ys[:,Vars.q], label=r'$q$')
         plt.plot(sigma, ys[:,Vars.t], label=r'$t$')
-        plt.plot(sigma, entropy(ys[:,Vars.t], ys[:,Vars.p]), label=r'$s$')
+        plt.plot(
+            sigma,
+            entropy(ys[:,Vars.t],
+            ys[:,Vars.p]),
+            label=r'$s$'
+        )
         plt.plot(
             sigma,
             dlogt_dlogp(ys[:,Vars.t], ys[:,Vars.p]),
