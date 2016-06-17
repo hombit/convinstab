@@ -51,7 +51,7 @@ def entropy(t, p):
     array
     '''
     s = 2.5 * np.log(t) - np.log(p)
-    s /= np.abs( s.max() )
+    s /= np.max( np.abs(s) )
     return s
 
 def dlogt_dlogp(t, p):
