@@ -129,12 +129,12 @@ def plot_vert_struct(fp, n=100, filename=None):
     lines += plt.plot(sigma, ys[:,Vars.z], label=r'$z$')
     lines += plt.plot(sigma, ys[:,Vars.q], label=r'$q$')
     lines += plt.plot(sigma, ys[:,Vars.t], label=r'$t$')
-    lines += plt.plot(
-        sigma,
-        entropy(ys[:,Vars.t],
-        ys[:,Vars.p]),
-        label=r'$s$'
-    )
+#    lines += plt.plot(
+#        sigma,
+#        entropy(ys[:,Vars.t],
+#        ys[:,Vars.p]),
+#        label=r'$s$'
+#    )
     lines += plt.plot(
         sigma,
         dlogt_dlogp(ys[:,Vars.t], ys[:,Vars.p]),
@@ -149,7 +149,11 @@ def plot_vert_struct(fp, n=100, filename=None):
 
 
 class FindPi(object):
-    '''
+    __Pi = None
+    __Pi0 = np.array( [5, 0.5, 1, 0.4] )
+    _Pi0 = __Pi0
+
+    __doc__ = '''
     Solver of the system of dimensionless vertical structure ODEs similar to
     the system in Ketsaris, Shakura (1998) (KS1998). The system contains four
     linear differential equations for four unknown variables: pressure,
@@ -158,16 +162,17 @@ class FindPi(object):
     boundary conditions (two for each function) and four unknown parameters
     `Pi`. These unknown parameters depend on one free parameter `tau`. The
     result of the solution is values of this four parameters Pi (method
-    `getPi`) and distributions of four unknown functions (methods `mesh` and
-    `plot_mesh`).
+    `getPi`) and distributions of four unknown functions (method `mesh`).
 
     Parameters
     ----------
     tau : positive float, optional
-        Free parameter of the problem. It corresponds to tau_0 for ``ff``
-        transfer and delta for ``thomson`` transfer from KS1998.
+        Free parameter of the problem. It corresponds to tau_0 for
+        ``absorption`` transfer and delta for ``scattering`` transfer from
+        KS1998.
     Pi0 : array_like, optional
-        Initial guess. Default is typical values from KS1998.
+        Initial guess. Default is typical values from KS1998:
+        ``{Pi0}``
     reverse : bool, optional
         Specifies direction of ODEs integration. If False than integrate from
         `sigma` = 0 to `sigma` = 1 (from plane of symmetry to photosphere), if
@@ -181,7 +186,7 @@ class FindPi(object):
               dq/dsigma ~ t, b = 0, d = 1.
             - 'const' describes constant energy generation per unit mass,
               dq/dz ~ p/t, dq/dsigma ~ 1, b = -1, d = 1.
-            - 'microvisc' describes heating by microscopic ion viscosity,
+            - 'ion' describes energy release by microscopic ion viscosity,
               dq/dz ~ t^2.5, dq/dsigma ~ t^3.5/p, b = 2.5, d = 0.
         
         Default is ``alpha``.
@@ -191,14 +196,14 @@ class FindPi(object):
         and p(1) and default opacity law (see ``opacity`` description bellow).
         Should be one of
         
-            - 'ff' absorption dominates over scattering.
+            - 'absorption' absorption dominates over scattering.
               Default ``opacity`` law is kappa ~ rho/t^3.5, varsigma = 1,
               psi = 3.5 (Kramer\'s opacity law).
-            - 'thompson' scattering dominates over absorption.
+            - 'scattering' scattering dominates over absorption.
               Default ``opacity`` law is kappa ~ 1, varsigma = 0, psi = 0
               (Thomson scattering).
          
-        Default is ``ff``.
+        Default is ``absorption``.
     opacity : sequence or None, optional
         ``(varsigma, psi)`` pair that describes opacity law:
         kappa ~ rho^varsigma / t^psi.
@@ -209,6 +214,9 @@ class FindPi(object):
     ----------
     Pi : array or None
         The main result of calculations. None for fresh object
+    _Pi0 : array
+        Default value of initial guess for Pi0. It should equals
+        ``{Pi0}``
 
     Methods
     -------
@@ -222,23 +230,23 @@ class FindPi(object):
     -----
     Optimization problem is solved with the same bounds (0.1, 10) for all of
     four parameters Pi.
-    '''
-
-    __Pi = None
+    '''.format(Pi0=__Pi0)
 
     def __init__(self, 
         tau,
-        Pi0 = np.array( [5, 0.5, 1, 0.4] ),
+        Pi0 = None,
         reverse = True,
         heating = 'alpha',
-        transfer = 'ff',
+        transfer = 'absorption',
         opacity = None
     ):
         self.__tau = tau
-        self.__Pi0 = Pi0
         self.__reverse = reverse
         self.__heating = heating
         self.__transfer = transfer
+
+        if Pi0 is not None:
+            self.__Pi0 = Pi0
 
         if heating == 'alpha':
             self.__b = 0.
@@ -246,7 +254,7 @@ class FindPi(object):
         elif heating == 'const':
             self.__b = -1.
             self.__d = 1.
-        elif heating == 'microvisc':
+        elif heating == 'ion':
             self.__b = 2.5
             self.__d = 0.
         elif len(heating) == 2 and isinstance(heating[0], Real) and isinstance(heating[1], Real):
@@ -256,9 +264,9 @@ class FindPi(object):
             raise ValueError('Unknown heating type {}'.format(heating))
 
         if opacity is None:
-            if transfer == 'ff':
+            if transfer == 'absorption':
                 self.__opacity = (1., 3.5)
-            elif transfer == 'thompson':
+            elif transfer == 'scattering':
                 self.__opacity = (0., 0.)
             else:
                 raise ValueError('Unknown transfer type {}'.format(transfer))
@@ -277,7 +285,7 @@ class FindPi(object):
         self.__y0[Vars.q] = 0.
         self.__y0[Vars.t] = 1.
 
-        if transfer == 'ff':
+        if transfer == 'absorption':
             self.__f_tau2over3 = integrate.quad(
                 lambda x: (1. + 1.5*x)**((self.__psi+self.__varsigma)/4.),
                 0., 2./3.
@@ -386,7 +394,7 @@ class FindPi(object):
         y1[Vars.z] = 1
         y1[Vars.q] = 1
 
-        if self.__transfer == 'ff':
+        if self.__transfer == 'absorption':
             y1[Vars.t] = ( 16./3. * Pi[3] / self.__tau )**0.25
             y1[Vars.p] = (
                     3. * (self.__varsigma+1.) / (16. * 2.**((self.__psi+self.__varsigma)/4.) )
@@ -394,7 +402,7 @@ class FindPi(object):
                     * y1[Vars.t]**(self.__psi+self.__varsigma+4.)
                     * self.__f_tau2over3
                 )**(1./(self.__varsigma+1))
-        elif self.__transfer == 'thompson':
+        elif self.__transfer == 'scattering':
             y1[Vars.t] = ( 4 * Pi[3] / self.__tau )**0.25
             y1[Vars.p] = Pi[0] * Pi[1] / self.__tau
         else:
@@ -512,8 +520,8 @@ if __name__ == '__main__':
     fp = FindPi(
         10**logtau,
         reverse=True,
-        heating = 'alpha',
-        transfer = 'ff',
+        heating = 'ion',
+        transfer = 'scattering',
 #        opacity = (1., 2.5),
     )
     print( fp.getPi() )
