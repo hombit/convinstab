@@ -4,6 +4,7 @@
 import numpy as np
 from copy import copy
 from enum import IntEnum
+from numbers import Real
 from scipy import optimize, integrate, interpolate
 
 
@@ -69,9 +70,82 @@ def dlogt_dlogp(t, p):
     array_like
     '''
     logp = np.log(p)
-    tck = interpolate.splrep( logp, np.log(t) )
+    tck = interpolate.splrep( logp, np.log(t), k=1 )
     dlogdlog = interpolate.splev( logp, tck, der=1 )
     return dlogdlog
+
+def plot_vert_struct(fp, n=100, filename=None):
+    '''
+    Plot distributions of various functions to the EPS file.
+    This function plots all unknown functions, normalized entropy `s` and
+    derivative d log(t) / d log(p).
+
+    Parameters
+    ----------
+    fp : FindPi
+        Object used to calculate variables
+    n : positive int, optional
+        Number of points in sigma mesh.
+    filename : str or None, optional
+        Path of the filename to save plot. If None construct filename of
+        the format ``{heating}_{transfer}_logtau_{logtau}.eps`` in the
+        local directory.
+    '''
+    dashes = [
+        (10000,),
+        (6,6),
+        (2,6),
+        (8,4,2,4),
+        (2,2,),
+        (2,4,2,4,2,8)
+    ]
+
+    log10tau = np.log10(fp.tau)
+
+    if filename is None:
+        filename = '{}_{}_logtau_{}.pdf'.format(fp.heating, fp.transfer, log10tau)
+
+    sigma, ys = fp.mesh(n)
+
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    rc('text', usetex=True)
+    plt.title(
+        r'Heating is \textit{{{heating}}}, transfer is \textit{{{transfer}}}, $\log{{\tau}} = {logtau:.1f}$\\{Pi}'.format(
+            heating = fp.heating,
+            transfer = fp.transfer,
+            logtau = log10tau,
+            Pi = ',  '.join( map(
+                lambda i: '$\Pi_{} = {:.3f}$'.format(i+1, fp.Pi[i]),
+                range(fp.Pi.shape[0])
+            ) )
+        ),
+        multialignment = 'center'
+    )
+    plt.xlabel(r'$\sigma$')
+    plt.ylim([0, 1])
+    lines = []
+    lines += plt.plot(sigma, ys[:,Vars.p], label=r'$p$')
+    lines += plt.plot(sigma, ys[:,Vars.z], label=r'$z$')
+    lines += plt.plot(sigma, ys[:,Vars.q], label=r'$q$')
+    lines += plt.plot(sigma, ys[:,Vars.t], label=r'$t$')
+    lines += plt.plot(
+        sigma,
+        entropy(ys[:,Vars.t],
+        ys[:,Vars.p]),
+        label=r'$s$'
+    )
+    lines += plt.plot(
+        sigma,
+        dlogt_dlogp(ys[:,Vars.t], ys[:,Vars.p]),
+        label=r'$\frac{d \log{t}}{d \log{p}}$'
+    )
+    plt.setp(lines, color='k')
+    for i, line in enumerate(lines):
+#        plt.setp(line, linestyle=':')
+        plt.setp(line, dashes=dashes[i])
+    plt.legend(loc='best')
+    plt.savefig(filename)
 
 
 class FindPi(object):
@@ -89,8 +163,9 @@ class FindPi(object):
 
     Parameters
     ----------
-    tau : positive float
-        Free parameter of the problem.
+    tau : positive float, optional
+        Free parameter of the problem. It corresponds to tau_0 for ``ff``
+        transfer and delta for ``thomson`` transfer from KS1998.
     Pi0 : array_like, optional
         Initial guess. Default is typical values from KS1998.
     reverse : bool, optional
@@ -98,23 +173,37 @@ class FindPi(object):
         `sigma` = 0 to `sigma` = 1 (from plane of symmetry to photosphere), if
         True than in opposite direction. True is default and usually shows
         better divergence of optimization process.
-    heating : str, optional
-        Type of heating in the disc. Should be one of
+    heating : str or sequence, optional
+        Heating law: dq/dz ~ t^b * p^d. Should be ``(b, d)`` pair
+        or one of following strings:
         
-            - 'alpha' describes Shakura-Syunyaev alpha-disc, dq/dsigma ~ t.
+            - 'alpha' describes Shakura-Syunyaev alpha-disc, dq/dz ~ p,
+              dq/dsigma ~ t, b = 0, d = 1.
             - 'const' describes constant energy generation per unit mass,
-              dq/dsigma ~ 1.
+              dq/dz ~ p/t, dq/dsigma ~ 1, b = -1, d = 1.
             - 'microvisc' describes heating by microscopic ion viscosity,
-              dq/dsigma ~ t**3.5/p.
+              dq/dz ~ t^2.5, dq/dsigma ~ t^3.5/p, b = 2.5, d = 0.
         
         Default is ``alpha``.
     transfer : str, optional
-        Type of energy transfer in the disc. Should be one of
+        Type of energy transfer in the disc. It sets type of free parameter tau
+        (tau_0 or delta from KS1998), type of boundary conditions for t(1)
+        and p(1) and default opacity law (see ``opacity`` description bellow).
+        Should be one of
         
-            - 'ff' describes Kramer's law of free-free opacity.
-            - 'thompson' describes Thompson's scattering.
+            - 'ff' absorption dominates over scattering.
+              Default ``opacity`` law is kappa ~ rho/t^3.5, varsigma = 1,
+              psi = 3.5 (Kramer\'s opacity law).
+            - 'thompson' scattering dominates over absorption.
+              Default ``opacity`` law is kappa ~ 1, varsigma = 0, psi = 0
+              (Thomson scattering).
          
-         Default is ``ff``.
+        Default is ``ff``.
+    opacity : sequence or None, optional
+        ``(varsigma, psi)`` pair that describes opacity law:
+        kappa ~ rho^varsigma / t^psi.
+        If None then it is setted by ``transfer`` parameter (see its
+        description above).
 
     Attributes
     ----------
@@ -128,8 +217,6 @@ class FindPi(object):
         Raise RuntimeError if optimization failed.
     mesh(n=1000)
         Distribution of unknown functions of the sigma mesh with n points
-    plot_mesh(n=1000, filename=None)
-        Plot distributions of various functions to the file
 
     Notes
     -----
@@ -145,6 +232,7 @@ class FindPi(object):
         reverse = True,
         heating = 'alpha',
         transfer = 'ff',
+        opacity = None
     ):
         self.__tau = tau
         self.__Pi0 = Pi0
@@ -152,18 +240,48 @@ class FindPi(object):
         self.__heating = heating
         self.__transfer = transfer
 
+        if heating == 'alpha':
+            self.__b = 0.
+            self.__d = 1.
+        elif heating == 'const':
+            self.__b = -1.
+            self.__d = 1.
+        elif heating == 'microvisc':
+            self.__b = 2.5
+            self.__d = 0.
+        elif len(heating) == 2 and isinstance(heating[0], Real) and isinstance(heating[1], Real):
+            self.__b, self.__d = self.heating
+            self.__heating = 'custom'
+        else:
+            raise ValueError('Unknown heating type {}'.format(heating))
+
+        if opacity is None:
+            if transfer == 'ff':
+                self.__opacity = (1., 3.5)
+            elif transfer == 'thompson':
+                self.__opacity = (0., 0.)
+            else:
+                raise ValueError('Unknown transfer type {}'.format(transfer))
+        elif len(opacity) == 2 and isinstance(opacity[0], Real) and isinstance(opacity[1], Real):
+            self.__opacity = opacity
+        else:
+            raise ValueError('Unknown opacity type {}. It should be either None or sequence of two real numbers'.format(opacity))
+
+        self.__varsigma, self.__psi = self.__opacity
+
         self.__log10tau = np.log10(self.__tau)
 
         self.__y0 = np.empty(lenVars)
-        self.__y0[Vars.p] = 1
-        self.__y0[Vars.z] = 0
-        self.__y0[Vars.q] = 0
-        self.__y0[Vars.t] = 1
+        self.__y0[Vars.p] = 1.
+        self.__y0[Vars.z] = 0.
+        self.__y0[Vars.q] = 0.
+        self.__y0[Vars.t] = 1.
 
-        self.__f_tau2over3 = integrate.quad(
-            lambda x: (1. + 1.5*x)**1.125,
-            0., 2./3
-        )[0]
+        if transfer == 'ff':
+            self.__f_tau2over3 = integrate.quad(
+                lambda x: (1. + 1.5*x)**((self.__psi+self.__varsigma)/4.),
+                0., 2./3.
+            )[0]
 
         if self.__reverse:
             self.__sigma = np.array([1., 0.])
@@ -183,25 +301,43 @@ class FindPi(object):
         return self.__reverse
 
     @property
-    def transfer(self):
-        return self.__transfer
-
-    @property
     def heating(self):
         return self.__heating
 
     @property
+    def b(self):
+        return self.__b
+
+    @property
+    def d(self):
+        return self.__d
+
+    @property
+    def transfer(self):
+        return self.__transfer
+
+    @property
+    def opacity(self):
+        return self.__opacity
+
+    @property
+    def varsigma(self):
+        'From opacity law kappa ~ rho^varsigma / t^psi'
+        return self.__varsigma
+
+    @property
+    def psi(self):
+        'From opacity law kappa ~ rho^varsigma / t^psi'
+        return self.__psi
+
+    @property
     def y0(self):
-        '''
-        Left boundary conditions
-        '''
+        'Left boundary conditions'
         return copy(self.__y0)
 
     @property
     def Pi(self):
-        '''
-        Result of optimization
-        '''
+        'Result of optimization'
         return copy(self.__Pi)
 
     def _derivatives(self, y, sigma, Pi):
@@ -227,21 +363,9 @@ class FindPi(object):
         
         dy[Vars.z] = Pi[1] * y[Vars.t] / y[Vars.p]
         
-        if self.__heating == 'alpha':
-            dy[Vars.q] = Pi[2] * y[Vars.t]
-        elif self.__heating == 'const':
-            dy[Vars.q] = Pi[2]
-        elif self.__heating == 'microvisc':
-            dy[Vars.q] = Pi[2] * y[Vars.t]**3.5 / y[Vars.p]
-        else:
-            raise ValueError('Unknown heating type {}'.format(self.__heating))
+        dy[Vars.q] = Pi[2] * y[Vars.t]**(self.__b+1) * y[Vars.p]**(self.__d-1)
         
-        if self.__transfer == 'ff':
-            dy[Vars.t] = -Pi[3] * y[Vars.q] * y[Vars.p] / y[Vars.t]**(7.5)
-        elif self.__transfer == 'thompson':
-            dy[Vars.t] = -Pi[3] * y[Vars.q] / y[Vars.t]**3
-        else:
-            raise ValueError('Unknown transfer type {}'.format(self.__transfer))
+        dy[Vars.t] = -Pi[3] * y[Vars.q] * y[Vars.p]**(self.__varsigma) / y[Vars.t]**(self.__psi+self.__varsigma+3)
 
         return dy
 
@@ -263,8 +387,13 @@ class FindPi(object):
         y1[Vars.q] = 1
 
         if self.__transfer == 'ff':
-            y1[Vars.t] = ( 16./3 * Pi[3] / self.__tau )**0.25
-            y1[Vars.p] = np.sqrt( 3./(16 * 2**(1/8)) * Pi[0]*Pi[1]/Pi[3] * y1[Vars.t]**8.5 * self.__f_tau2over3 )
+            y1[Vars.t] = ( 16./3. * Pi[3] / self.__tau )**0.25
+            y1[Vars.p] = (
+                    3. * (self.__varsigma+1.) / (16. * 2.**((self.__psi+self.__varsigma)/4.) )
+                    * Pi[0] * Pi[1] / Pi[3]
+                    * y1[Vars.t]**(self.__psi+self.__varsigma+4.)
+                    * self.__f_tau2over3
+                )**(1./(self.__varsigma+1))
         elif self.__transfer == 'thompson':
             y1[Vars.t] = ( 4 * Pi[3] / self.__tau )**0.25
             y1[Vars.p] = Pi[0] * Pi[1] / self.__tau
@@ -369,61 +498,6 @@ class FindPi(object):
         ys = self._integrate(self.__Pi, sigma=sigma)
         return sigma, ys
 
-    def plot_mesh(self, n=1000, filename=None):
-        '''
-        Plot distributions of various functions to the file.
-        This method plots all unknown functions, normalized entropy `s` and
-        derivative d log(t) / d log(p).
-
-        Parameters
-        ----------
-        n : positive int, optional
-            Number of points in sigma mesh.
-        filename : str or None, optional
-            Path of the filename to save plot. If None construct filename of
-            the format ``{heating}_{transfer}_logtau_{logtau}.pdf`` in the
-            local directory.
-        '''
-        if filename is None:
-            filename = '{}_{}_logtau_{}.pdf'.format(self.__heating, self.__transfer, self.__log10tau)
-
-        sigma, ys = self.mesh(n)
-
-        import matplotlib.pyplot as plt
-        from matplotlib import rc
-        rc('text', usetex=True)
-        plt.title(
-            r'Heating is \textit{{{heating}}}, transfer is \textit{{{transfer}}}, $\log{{\tau}} = {logtau:.1f}$\\{Pi}'.format(
-                heating = self.__heating,
-                transfer = self.__transfer,
-                logtau = self.__log10tau,
-                Pi = ',  '.join( map(
-                    lambda i: '$\Pi_{} = {:.3f}$'.format(i+1, self.__Pi[i]),
-                    range(self.__Pi.shape[0])
-                ) )
-            ),
-            multialignment = 'center'
-        )
-        plt.xlabel(r'$\sigma$')
-        plt.ylim([0, 1])
-        plt.plot(sigma, ys[:,Vars.p], label=r'$p$')
-        plt.plot(sigma, ys[:,Vars.z], label=r'$z$')
-        plt.plot(sigma, ys[:,Vars.q], label=r'$q$')
-        plt.plot(sigma, ys[:,Vars.t], label=r'$t$')
-        plt.plot(
-            sigma,
-            entropy(ys[:,Vars.t],
-            ys[:,Vars.p]),
-            label=r'$s$'
-        )
-        plt.plot(
-            sigma,
-            dlogt_dlogp(ys[:,Vars.t], ys[:,Vars.p]),
-            label=r'$\frac{d \log{t}}{d \log{p}}$'
-        )
-        plt.legend(loc='best', frameon=False)
-        plt.savefig(filename)
-
 
 ###################
 
@@ -438,8 +512,9 @@ if __name__ == '__main__':
     fp = FindPi(
         10**logtau,
         reverse=True,
-        heating = 'microvisc',
-        transfer = 'thompson',
+        heating = 'alpha',
+        transfer = 'ff',
+#        opacity = (1., 2.5),
     )
     print( fp.getPi() )
-    fp.plot_mesh()
+    plot_vert_struct(fp)
