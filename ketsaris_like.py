@@ -220,6 +220,14 @@ class FindPi(object):
     ----------
     Pi : array or None
         The main result of calculations. None for fresh object
+    b : float
+        From heating law ``eta ~ t^b p^d``
+    d : float
+        From heating law ``eta ~ t^b p^d``
+    varsigma : float
+        From opacity law ``varkappa ~ rho^varsigma / t^psi``
+    psi : float
+        From opacity law ``varkappa ~ rho^varsigma / t^psi``
     _Pi0 : array
         Default value of initial guess for Pi0. It should equals
         ``{Pi0}``
