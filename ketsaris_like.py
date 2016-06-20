@@ -203,16 +203,16 @@ class FindPi(object):
         Should be one of
         
             - 'absorption' absorption dominates over scattering.
-              Default ``opacity`` law is kappa ~ rho/t^3.5, varsigma = 1,
+              Default ``opacity`` law is varkappa ~ rho/t^3.5, varsigma = 1,
               psi = 3.5 (Kramer\'s opacity law).
             - 'scattering' scattering dominates over absorption.
-              Default ``opacity`` law is kappa ~ 1, varsigma = 0, psi = 0
+              Default ``opacity`` law is varkappa ~ 1, varsigma = 0, psi = 0
               (Thomson scattering).
          
         Default is ``absorption``.
     opacity : sequence or None, optional
         ``(varsigma, psi)`` pair that describes opacity law:
-        kappa ~ rho^varsigma / t^psi.
+        varkappa ~ rho^varsigma / t^psi.
         If None then it is setted by ``transfer`` parameter (see its
         description above).
 
@@ -346,12 +346,12 @@ class FindPi(object):
 
     @property
     def varsigma(self):
-        'From opacity law kappa ~ rho^varsigma / t^psi'
+        'From opacity law varkappa ~ rho^varsigma / t^psi'
         return self.__varsigma
 
     @property
     def psi(self):
-        'From opacity law kappa ~ rho^varsigma / t^psi'
+        'From opacity law varkappa ~ rho^varsigma / t^psi'
         return self.__psi
 
     @property
