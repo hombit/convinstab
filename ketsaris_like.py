@@ -34,7 +34,7 @@ class Vars(IntEnum):
 lenVars = len(Vars.__members__)
 
 
-def entropy(t, p):
+def entropy_tp(t, p):
     '''
     Dimensionless entropy from temperate and pressure.
     Output array is normalized on its maximum absolute value
@@ -54,7 +54,7 @@ def entropy(t, p):
     s /= np.max( np.abs(s) )
     return s
 
-def dlogt_dlogp(t, p):
+def dlogT_dlogP(t, p):
     '''
     Logarithmic derivate of temperature of pressure
 
@@ -74,22 +74,27 @@ def dlogt_dlogp(t, p):
     dlogdlog = interpolate.splev( logp, tck, der=1 )
     return dlogdlog
 
-def plot_vert_struct(fp, n=100, filename=None):
+def plot_vert_struct(fp, n=100, filename=None, entropy=False, dlogTdlogP=False):
     '''
     Plot distributions of various functions to the EPS file.
-    This function plots all unknown functions, normalized entropy `s` and
-    derivative d log(t) / d log(p).
+    This function plots all unknown functions, and optionally normalized
+    entropy `s` and derivative d log(T) / d log(P).
 
     Parameters
     ----------
     fp : FindPi
-        Object used to calculate variables
+        Object used to calculate variables.
     n : positive int, optional
         Number of points in sigma mesh.
     filename : str or None, optional
         Path of the filename to save plot. If None construct filename of
         the format ``{heating}_{transfer}_logtau_{logtau}.eps`` in the
         local directory.
+    entropy : bool, optional
+        Plot entropy normalized on maximum absolute value.
+    dlogTdlogP : bool, optional
+        Plot d log(T) / d log(P). When its value larger than 0.4 convection
+        appears.
     '''
     dashes = [
         (10000,),
@@ -129,17 +134,18 @@ def plot_vert_struct(fp, n=100, filename=None):
     lines += plt.plot(sigma, ys[:,Vars.z], label=r'$z$')
     lines += plt.plot(sigma, ys[:,Vars.q], label=r'$q$')
     lines += plt.plot(sigma, ys[:,Vars.t], label=r'$t$')
-#    lines += plt.plot(
-#        sigma,
-#        entropy(ys[:,Vars.t],
-#        ys[:,Vars.p]),
-#        label=r'$s$'
-#    )
-    lines += plt.plot(
-        sigma,
-        dlogt_dlogp(ys[:,Vars.t], ys[:,Vars.p]),
-        label=r'$\frac{d \log{t}}{d \log{p}}$'
-    )
+    if entropy:
+        lines += plt.plot(
+            sigma,
+            entropy_tp(ys[:,Vars.t], ys[:,Vars.p]),
+            label=r'$s$'
+        )
+    if dlogTdlogP:
+        lines += plt.plot(
+            sigma,
+            dlogT_dlogP(ys[:,Vars.t], ys[:,Vars.p]),
+            label=r'$\frac{d \log{t}}{d \log{p}}$'
+        )
     plt.setp(lines, color='k')
     for i, line in enumerate(lines):
 #        plt.setp(line, linestyle=':')
@@ -223,6 +229,8 @@ class FindPi(object):
     getPi()
         Solve optimization problem and returns array with parameters Pi.
         Raise RuntimeError if optimization failed.
+    dlogTdlogP_centr()
+        Return value of d log T / d log P at the plane of symmetry of the disc
     mesh(n=1000)
         Distribution of unknown functions of the sigma mesh with n points
 
@@ -482,6 +490,11 @@ class FindPi(object):
         else:
             raise RuntimeError('Cannon solve optimization problem. Relative OptimizeResult is\n{}'.format(opt_res))
 
+    def dlogTdlogP_centr(self):
+        'Return value of d log T / d log P at the plane of symmetry of the disc'
+        Pi = self.getPi()
+        return Pi[2] * Pi[3] / ( Pi[0] * Pi[1]**2 )
+
     def mesh(self, n=1000):
         '''
         Distribution of unknown functions of the sigma mesh with `n` points.
@@ -525,4 +538,4 @@ if __name__ == '__main__':
 #        opacity = (1., 2.5),
     )
     print( fp.getPi() )
-    plot_vert_struct(fp)
+    plot_vert_struct(fp, dlogTdlogP=True)
