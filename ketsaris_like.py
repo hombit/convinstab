@@ -66,7 +66,7 @@ def dlogT_dlogP(t, p):
         Pressure.
 
     Returns
-    ------_
+    -------
     array_like
     '''
     logp = np.log(p)
@@ -74,7 +74,7 @@ def dlogT_dlogP(t, p):
     dlogdlog = interpolate.splev( logp, tck, der=1 )
     return dlogdlog
 
-def plot_vert_struct(fp, n=100, filename=None, entropy=False, dlogTdlogP=False):
+def plot_vert_struct(fp, n=10000, filename=None, entropy=False, dlogTdlogP=False):
     '''
     Plot distributions of various functions to the EPS file.
     This function plots all unknown functions, and optionally normalized
@@ -110,41 +110,47 @@ def plot_vert_struct(fp, n=100, filename=None, entropy=False, dlogTdlogP=False):
     if filename is None:
         filename = '{}_{}_logtau_{}.pdf'.format(fp.heating, fp.transfer, log10tau)
 
-    sigma, ys = fp.unknowns(n)
+    sigma, ys = fp.unknowns(np.linspace(1,0,n)**0.5)
 
+    from fractions import Fraction
     import matplotlib.pyplot as plt
     from matplotlib import rc
     rc('text', usetex=True)
     plt.title(
-        r'Heating is \textit{{{heating}}}, transfer is \textit{{{transfer}}}, $\log{{\tau}} = {logtau:.1f}$\\{Pi}'.format(
-            heating = fp.heating,
-            transfer = fp.transfer,
+        r'$b = {b}$, $d = {d}$, $\varsigma = {varsigma}$, $\psi = {psi}$, $\log {tau_name} = {logtau:.1f}$\\ {Pi}'.format(
+            b = Fraction(fp.b),
+            d = Fraction(fp.d),
+            varsigma = Fraction(fp.varsigma),
+            psi = Fraction(fp.psi),
+            tau_name = r'\tau_0' if fp.transfer == 'absorption' else r'\delta',
             logtau = log10tau,
+            xi = np.sqrt(fp.Pi[0] * 5./3.),
             Pi = ',  '.join( map(
-                lambda i: '$\Pi_{} = {:.3f}$'.format(i+1, fp.Pi[i]),
+                lambda i: r'$\Pi_{} = {:.3f}$'.format(i+1, fp.Pi[i]),
                 range(fp.Pi.shape[0])
             ) )
         ),
         multialignment = 'center'
     )
-    plt.xlabel(r'$\sigma$')
+    plt.xlabel(r'$x$')
+    plt.xlim([0, 1])
     plt.ylim([0, 1])
     lines = []
-    lines += plt.plot(sigma, ys[:,Vars.p], label=r'$p$')
-    lines += plt.plot(sigma, ys[:,Vars.z], label=r'$z$')
-    lines += plt.plot(sigma, ys[:,Vars.q], label=r'$q$')
-    lines += plt.plot(sigma, ys[:,Vars.t], label=r'$t$')
+    lines += plt.plot(ys[:,Vars.z], ys[:,Vars.p], label=r'$p$')
+    lines += plt.plot(ys[:,Vars.z], sigma,        label=r'$\sigma$')
+    lines += plt.plot(ys[:,Vars.z], ys[:,Vars.q], label=r'$q$')
+    lines += plt.plot(ys[:,Vars.z], ys[:,Vars.t], label=r'$t$')
     if entropy:
         lines += plt.plot(
-            sigma,
+            ys[:,Vars.z],
             entropy_tp(ys[:,Vars.t], ys[:,Vars.p]),
             label=r'$s$'
         )
     if dlogTdlogP:
         lines += plt.plot(
-            sigma,
+            ys[:,Vars.z],
             dlogT_dlogP(ys[:,Vars.t], ys[:,Vars.p]),
-            label=r'$\frac{d \log{t}}{d \log{p}}$'
+            label=r'$\frac{d \log{T}}{d \log{P}}$'
         )
     plt.setp(lines, color='k')
     for i, line in enumerate(lines):
@@ -544,8 +550,8 @@ if __name__ == '__main__':
         10**logtau,
         reverse=True,
         heating = 'ion',
-        transfer = 'scattering',
+        transfer = 'absorption',
 #        opacity = (1., 2.5),
     )
     print( fp.getPi() )
-    plot_vert_struct(fp, dlogTdlogP=True)
+    plot_vert_struct(fp, dlogTdlogP=True, entropy=True)
