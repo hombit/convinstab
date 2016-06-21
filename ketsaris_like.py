@@ -4,7 +4,7 @@
 import numpy as np
 from copy import copy
 from enum import IntEnum
-from numbers import Real
+from numbers import Integral, Real
 from scipy import optimize, integrate, interpolate
 
 
@@ -85,7 +85,7 @@ def plot_vert_struct(fp, n=100, filename=None, entropy=False, dlogTdlogP=False):
     fp : FindPi
         Object used to calculate variables.
     n : positive int, optional
-        Number of points in sigma mesh.
+        Number of sigma points.
     filename : str or None, optional
         Path of the filename to save plot. If None construct filename of
         the format ``{heating}_{transfer}_logtau_{logtau}.eps`` in the
@@ -110,7 +110,7 @@ def plot_vert_struct(fp, n=100, filename=None, entropy=False, dlogTdlogP=False):
     if filename is None:
         filename = '{}_{}_logtau_{}.pdf'.format(fp.heating, fp.transfer, log10tau)
 
-    sigma, ys = fp.mesh(n)
+    sigma, ys = fp.unknowns(n)
 
     import matplotlib.pyplot as plt
     from matplotlib import rc
@@ -168,7 +168,7 @@ class FindPi(object):
     boundary conditions (two for each function) and four unknown parameters
     `Pi`. These unknown parameters depend on one free parameter `tau`. The
     result of the solution is values of this four parameters Pi (method
-    `getPi`) and distributions of four unknown functions (method `mesh`).
+    `getPi`) and distributions of four unknown functions (method `unknowns`).
 
     Parameters
     ----------
@@ -238,9 +238,9 @@ class FindPi(object):
         Solve optimization problem and returns array with parameters Pi.
         Raise RuntimeError if optimization failed.
     dlogTdlogP_centr()
-        Return value of d log T / d log P at the plane of symmetry of the disc
-    mesh(n=1000)
-        Distribution of unknown functions of the sigma mesh with n points
+        Value of d log T / d log P in the plane of symmetry of the disc.
+    unknowns(sigma=1000)
+        Distribution of unknown functions on `sigma`.
 
     Notes
     -----
@@ -380,17 +380,11 @@ class FindPi(object):
         -------
         array
         '''
-
         dy = np.empty(lenVars)
-
         dy[Vars.p] = -Pi[0] * Pi[1] * y[Vars.z]
-        
         dy[Vars.z] = Pi[1] * y[Vars.t] / y[Vars.p]
-        
         dy[Vars.q] = Pi[2] * y[Vars.t]**(self.__b+1) * y[Vars.p]**(self.__d-1)
-        
         dy[Vars.t] = -Pi[3] * y[Vars.q] * y[Vars.p]**(self.__varsigma) / y[Vars.t]**(self.__psi+self.__varsigma+3)
-
         return dy
 
     def _y1(self, Pi):
@@ -434,10 +428,10 @@ class FindPi(object):
         ----------
         Pi : array-like
         sigma : array-like or None, optional
-            Values of sigma points for which to solve for `y`. The first point
+            Values of sigma points for which to find `y`. The first point
             should be 0 for `reverse` == False and 1 for `reverse` == True.
-            If None than used `__sigma` that is [0,1] for `reverse` == True and
-            [1,0] otherwise, this is default value.
+            If None than use `__sigma` that is ``[1,0]`` for `reverse` == True
+            and ``[0,1]`` otherwise.
 
         Returns
         -------
@@ -487,44 +481,52 @@ class FindPi(object):
 
         opt_res = optimize.minimize(
             self._discrepancy,
-            # self._dy1,
             self.__Pi0,
             bounds = ((0.1, 10,),) * lenVars
         )
         
         if opt_res.status == 0:
             self.__Pi = opt_res.x
-            return opt_res.x
+            return self.__Pi
         else:
             raise RuntimeError('Cannon solve optimization problem. Relative OptimizeResult is\n{}'.format(opt_res))
 
     def dlogTdlogP_centr(self):
-        'Return value of d log T / d log P at the plane of symmetry of the disc'
+        '''
+        Return value of d log T / d log P at the plane of symmetry of the disc.
+        '''
         Pi = self.getPi()
         return Pi[2] * Pi[3] / ( Pi[0] * Pi[1]**2 )
 
-    def mesh(self, n=1000):
+    def unknowns(self, sigma=1000):
         '''
-        Distribution of unknown functions of the sigma mesh with `n` points.
+        Distribution of unknown functions on `sigma`.
 
         Parameters
         ----------
-        n : positive int, optional
-            Number of points in sigma mesh
+        sigma : array or int, optional
+            If type is ``array`` then `sigma` should be monotonous sequence of
+            sigma points with the first element equals 1 if `reverse` == True
+            and 0 otherwise.
+            If type is ``int`` then linear mesh with `sigma` points between 0
+            and 1 is used.
 
         Returns
         -------
+        array, shape(n)
+            Array with `sigma` values
         array, shape(n, len(Pi))
-            Array containing the value of `y` for each point of the mesh.            
+            Array with corresponding values of unknown functions
         '''
-        self.getPi()
-
-        if self.__reverse:
-            sigma = np.linspace(1, 0, n)
+        if isinstance(sigma, Integral):
+            if self.__reverse:
+                sigma = np.linspace(1, 0, sigma)
+            else:
+                sigma = np.linspace(0, 1, sigma)
         else:
-            sigma = np.linspace(0, 1, n)
+            sigma = np.asarray(sigma)
 
-        ys = self._integrate(self.__Pi, sigma=sigma)
+        ys = self._integrate(self.getPi(), sigma=sigma)
         return sigma, ys
 
 
