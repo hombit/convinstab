@@ -74,91 +74,6 @@ def dlogT_dlogP(t, p):
     dlogdlog = interpolate.splev( logp, tck, der=1 )
     return dlogdlog
 
-def plot_vert_struct(fp, n=10000, filename=None, entropy=False, dlogTdlogP=False):
-    '''
-    Plot distributions of various functions to the EPS file.
-    This function plots all unknown functions, and optionally normalized
-    entropy `s` and derivative d log(T) / d log(P).
-
-    Parameters
-    ----------
-    fp : FindPi
-        Object used to calculate variables.
-    n : positive int, optional
-        Number of sigma points.
-    filename : str or None, optional
-        Path of the filename to save plot. If None construct filename of
-        the format ``{heating}_{transfer}_logtau_{logtau}.eps`` in the
-        local directory.
-    entropy : bool, optional
-        Plot entropy normalized on maximum absolute value.
-    dlogTdlogP : bool, optional
-        Plot d log(T) / d log(P). When its value larger than 0.4 convection
-        appears.
-    '''
-    dashes = [
-        (10000,),
-        (6,6),
-        (2,6),
-        (8,4,2,4),
-        (2,2,),
-        (2,4,2,4,2,8)
-    ]
-
-    log10tau = np.log10(fp.tau)
-
-    if filename is None:
-        filename = '{}_{}_logtau_{}.pdf'.format(fp.heating, fp.transfer, log10tau)
-
-    sigma, ys = fp.unknowns(np.linspace(1,0,n)**0.5)
-
-    from fractions import Fraction
-    import matplotlib.pyplot as plt
-    from matplotlib import rc
-    rc('text', usetex=True)
-    plt.title(
-        r'$b = {b}$, $d = {d}$, $\varsigma = {varsigma}$, $\psi = {psi}$, $\log {tau_name} = {logtau:.1f}$\\ {Pi}'.format(
-            b = Fraction(fp.b),
-            d = Fraction(fp.d),
-            varsigma = Fraction(fp.varsigma),
-            psi = Fraction(fp.psi),
-            tau_name = r'\tau_0' if fp.transfer == 'absorption' else r'\delta',
-            logtau = log10tau,
-            xi = np.sqrt(fp.Pi[0] * 5./3.),
-            Pi = ',  '.join( map(
-                lambda i: r'$\Pi_{} = {:.3f}$'.format(i+1, fp.Pi[i]),
-                range(fp.Pi.shape[0])
-            ) )
-        ),
-        multialignment = 'center'
-    )
-    plt.xlabel(r'$x$')
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    lines = []
-    lines += plt.plot(ys[:,Vars.z], ys[:,Vars.p], label=r'$p$')
-    lines += plt.plot(ys[:,Vars.z], sigma,        label=r'$\sigma$')
-    lines += plt.plot(ys[:,Vars.z], ys[:,Vars.q], label=r'$q$')
-    lines += plt.plot(ys[:,Vars.z], ys[:,Vars.t], label=r'$t$')
-    if entropy:
-        lines += plt.plot(
-            ys[:,Vars.z],
-            entropy_tp(ys[:,Vars.t], ys[:,Vars.p]),
-            label=r'$s$'
-        )
-    if dlogTdlogP:
-        lines += plt.plot(
-            ys[:,Vars.z],
-            dlogT_dlogP(ys[:,Vars.t], ys[:,Vars.p]),
-            label=r'$\frac{d \log{T}}{d \log{P}}$'
-        )
-    plt.setp(lines, color='k')
-    for i, line in enumerate(lines):
-#        plt.setp(line, linestyle=':')
-        plt.setp(line, dashes=dashes[i])
-    plt.legend(loc='best')
-    plt.savefig(filename)
-
 
 class FindPi(object):
     __Pi = None
@@ -190,7 +105,7 @@ class FindPi(object):
         `sigma` = 0 to `sigma` = 1 (from plane of symmetry to photosphere), if
         True than in opposite direction. True is default and usually shows
         better divergence of optimization process.
-    heating : str or sequence, optional
+    heating : str or pair of floats, optional
         Heating law: dq/dz ~ t^b * p^d. Should be ``(b, d)`` pair
         or one of following strings:
         
@@ -216,7 +131,7 @@ class FindPi(object):
               (Thomson scattering).
          
         Default is ``absorption``.
-    opacity : sequence or None, optional
+    opacity : pair of floats or None, optional
         ``(varsigma, psi)`` pair that describes opacity law:
         varkappa ~ rho^varsigma / t^psi.
         If None then it is setted by ``transfer`` parameter (see its
@@ -495,7 +410,7 @@ class FindPi(object):
             self.__Pi = opt_res.x
             return self.__Pi
         else:
-            raise RuntimeError('Cannon solve optimization problem. Relative OptimizeResult is\n{}'.format(opt_res))
+            raise RuntimeError('Cannon solve optimization problem. Corresponding OptimizeResult is\n{}'.format(opt_res))
 
     def dlogTdlogP_centr(self):
         '''
@@ -540,18 +455,4 @@ class FindPi(object):
 
 
 if __name__ == '__main__':
-    from sys import argv
-    if len(argv) > 1:
-        logtau = float(argv[1])
-    else:
-        logtau = 3
-    
-    fp = FindPi(
-        10**logtau,
-        reverse=True,
-        heating = 'ion',
-        transfer = 'absorption',
-#        opacity = (1., 2.5),
-    )
-    print( fp.getPi() )
-    plot_vert_struct(fp, dlogTdlogP=True, entropy=True)
+    pass
