@@ -9,7 +9,7 @@ from fractions import Fraction
 
 rc('text', usetex=True)
 
-dashes = [
+_dashes = [
     (10000,1),
     (5,2,10,5),
     (2,6),
@@ -17,6 +17,16 @@ dashes = [
     (2,2,),
     (2,4,2,4,2,8)
 ]
+
+_kwargs_doc = '''
+    n : positive int, optional
+        Number of sigma points.
+    entropy : bool, optional
+        Plot entropy normalized on maximum absolute value.
+    dlogTdlogP : bool, optional
+        Plot d log(T) / d log(P). When its value larger than 0.4 convection
+        appears.
+'''
 
 
 
@@ -38,6 +48,21 @@ def _title(fp):
 
 
 def plot_to_ax(ax, fp, n=10000, entropy=False, dlogTdlogP=False):
+    '''
+    Base plot function. Draw distribution of unknowns to given Axes object.
+    
+    Parameters
+    ----------
+    ax : Axis
+        Where to draw
+    fp : FindPi
+        FindPi object used to compute vertical distributions
+    {kwargs}
+
+    Returns
+    -------
+    array of Lines
+    '''
     sigma, ys = fp.pzqt(np.linspace(1,0,n)**0.3)
 
     ax.set_title(_title(fp), multialignment = 'center')
@@ -48,7 +73,7 @@ def plot_to_ax(ax, fp, n=10000, entropy=False, dlogTdlogP=False):
     lines += ax.plot(ys[:,Vars.z], ys[:,Vars.p], label=r'$p$')
     lines += ax.plot(ys[:,Vars.z], sigma,        label=r'$\sigma$')
     lines += ax.plot(ys[:,Vars.z], ys[:,Vars.q], label=r'$q$')
-    lines += ax.plot(ys[:,Vars.z], ys[:,Vars.t], label=r'$t$')
+    lines += ax.plot(ys[:,Vars.z], ys[:,Vars.t], label=r'$\theta$')
     if entropy:
         lines += ax.plot(
             ys[:,Vars.z],
@@ -63,8 +88,10 @@ def plot_to_ax(ax, fp, n=10000, entropy=False, dlogTdlogP=False):
         )
     plt.setp(lines, color='k')
     for i, line in enumerate(lines):
-        plt.setp(line, dashes=dashes[i])
+        plt.setp(line, dashes=_dashes[i])
     return lines
+
+plot_to_ax.__doc__ = plot_to_ax.__doc__.format(kwargs=_kwargs_doc)
 
 
 def plot_to_file(fp, filename=None, **kwargs):
@@ -77,17 +104,15 @@ def plot_to_file(fp, filename=None, **kwargs):
     ----------
     fp : FindPi
         Object used to calculate variables.
-    n : positive int, optional
-        Number of sigma points.
     filename : str or None, optional
         Path of the filename to save plot. If None construct filename of
-        the format ``{heating}_{transfer}_logtau_{logtau}.eps`` in the
+        the format ``{{heating}}_{{transfer}}_logtau_{{logtau}}.eps`` in the
         local directory.
-    entropy : bool, optional
-        Plot entropy normalized on maximum absolute value.
-    dlogTdlogP : bool, optional
-        Plot d log(T) / d log(P). When its value larger than 0.4 convection
-        appears.
+    {kwargs}
+
+    Returns
+    -------
+    array of Lines
     '''
     if filename is None:
         filename = '{}_{}_logtau_{}.eps'.format(fp.heating, fp.transfer, np.log10(fp.tau))
@@ -98,8 +123,21 @@ def plot_to_file(fp, filename=None, **kwargs):
     plt.legend(loc='best')
     plt.savefig(filename)
 
+plot_to_file.__doc__ = plot_to_file.__doc__.format(kwargs=_kwargs_doc)
 
-def plot_four_to_file(fps, filename=None, **kwargs):
+
+def plot_four_to_file(fps, filename, **kwargs):
+    '''
+    Draw four distributions to one file.
+
+    Parameters.
+    -----------
+    fps : four FindPi
+        A sequence of FindPi objects used to draw plots
+    filename : str
+        Name of file to draw results
+    {kwargs}
+    '''
     rc('font', size=8)
     fig = plt.figure()
     for i, fp in enumerate(fps):
@@ -112,14 +150,25 @@ def plot_four_to_file(fps, filename=None, **kwargs):
         ncol = 6,
         bbox_to_anchor=(0.5, 0.0),
         borderaxespad=0.,
-        frameon = True,
+        frameon = False,
     )
     fig.tight_layout(pad=1.2)
     fig.subplots_adjust(bottom=0.105)
     plt.savefig(filename)
 
+plot_four_to_file.__doc__ = plot_four_to_file.__doc__.format(kwargs=_kwargs_doc)
+
 
 def plot_four_for_paper(heating, **kwargs):
+    '''
+    Draw figure for paper
+
+    Parameters
+    ----------
+    heating : str
+        Type of heating (see FindPi documentation)
+    {kwargs}
+    '''
     filename = '{}.eps'.format(heating)
     fps = []
     for tau in (1e1, 1e6):
@@ -131,6 +180,8 @@ def plot_four_for_paper(heating, **kwargs):
                 transfer=transfer
             ) )
     plot_four_to_file(fps, filename, dlogTdlogP=True, entropy=False)
+
+plot_four_for_paper.__doc__ = plot_four_for_paper.__doc__.format(kwargs=_kwargs_doc)
 
 
 
@@ -154,6 +205,6 @@ if __name__ == '__main__':
 #        opacity = (1., 2.5),
     )
     print( fp.getPi() )
-    plot_to_file(fp, dlogTdlogP=True, entropy=False)
-    #for heating in ('alpha', 'ion'):
-    #    plot_four_for_paper(heating)
+    #plot_to_file(fp, dlogTdlogP=True, entropy=False)
+    for heating in ('alpha', 'ion'):
+        plot_four_for_paper(heating)
