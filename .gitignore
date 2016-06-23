@@ -159,4 +159,5 @@ data/
 *.eps
 *.gnuplot
 test.ipynb
+Untitled.ipynb
 dumps/
