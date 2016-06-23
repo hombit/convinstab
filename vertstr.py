@@ -168,6 +168,27 @@ class FindPi(object):
     -----
     Optimization problem is solved with the same bounds (0.1, 10) for all of
     four parameters Pi.
+
+    Examples
+    --------
+    Find Pi values for alpha-disc and Kramer's opacities and tau_0 = 100:
+
+    >>> import numpy as np
+    >>> fp = FindPi(100)
+    >>> Pi = fp.getPi()
+    >>> print( np.round(Pi, decimals=3) )
+    [ 4.985  0.576  1.126  0.395]
+    
+    For some parameters we have to set initial guess Pi0:
+    >>> fp = FindPi(
+    ...     10,
+    ...     Pi0=[2, 0.7, 1, 0.6],
+    ...     heating='ion',
+    ...     transfer='scattering'
+    ... )
+    >>> Pi = fp.getPi()
+    >>> print( np.round(Pi, decimals=3) )
+    [ 2.632  0.737  0.996  0.418]
     '''.format(Pi0=__Pi0)
 
     def __init__(self, 
@@ -456,4 +477,5 @@ class FindPi(object):
 
 
 if __name__ == '__main__':
-    pass
+    import doctest
+    doctest.testmod()
