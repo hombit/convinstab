@@ -3,7 +3,7 @@
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
-from ketsaris_like import *
+from vertstr import *
 from fractions import Fraction
 
 
