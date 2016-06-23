@@ -83,13 +83,14 @@ class FindPi(object):
     __doc__ = '''
     Solver of the system of dimensionless vertical structure ODEs similar to
     the system in Ketsaris, Shakura (1998) (KS1998). The system contains four
-    linear differential equations for four unknown variables: pressure,
-    vertical coordinate z, flux of energy and temperature. The only argument is
-    dimensionless mass coordinate sigma. The system contains eight first-type
-    boundary conditions (two for each function) and four unknown parameters
-    `Pi`. These unknown parameters depend on one free parameter `tau`. The
-    result of the solution is values of this four parameters Pi (method
-    `getPi`) and distributions of four unknown functions (method `unknowns`).
+    linear differential equations for four unknown variables: pressure p,
+    vertical coordinate z, flux of energy q and temperature t. The only
+    argument is dimensionless mass coordinate sigma. The system contains eight
+    first-type boundary conditions (two for each function) and four unknown
+    parameters `Pi`. These unknown parameters depend on one free parameter
+    `tau`. The result of the solution is values of this four parameters Pi
+    (method `getPi`) and distributions of four unknown functions (method
+    `pzqt`).
 
     Parameters
     ----------
@@ -160,7 +161,7 @@ class FindPi(object):
         Raise RuntimeError if optimization failed.
     dlogTdlogP_centr()
         Value of d log T / d log P in the plane of symmetry of the disc.
-    unknowns(sigma=1000)
+    pzqt(sigma=1000)
         Distribution of unknown functions on `sigma`.
 
     Notes
@@ -419,7 +420,7 @@ class FindPi(object):
         Pi = self.getPi()
         return Pi[2] * Pi[3] / ( Pi[0] * Pi[1]**2 )
 
-    def unknowns(self, sigma=1000):
+    def pzqt(self, sigma=1000):
         '''
         Distribution of unknown functions on `sigma`.
 

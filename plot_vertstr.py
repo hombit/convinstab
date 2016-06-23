@@ -38,7 +38,7 @@ def _title(fp):
 
 
 def plot_to_ax(ax, fp, n=10000, entropy=False, dlogTdlogP=False):
-    sigma, ys = fp.unknowns(np.linspace(1,0,n)**0.3)
+    sigma, ys = fp.pzqt(np.linspace(1,0,n)**0.3)
 
     ax.set_title(_title(fp), multialignment = 'center')
     ax.set_xlabel(r'$x$')
@@ -95,7 +95,7 @@ def plot_to_file(fp, filename=None, **kwargs):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plot_to_ax(ax, fp, **kwargs)
-    plt.legend(loc='center left')
+    plt.legend(loc='best')
     plt.savefig(filename)
 
 
@@ -149,11 +149,11 @@ if __name__ == '__main__':
         10**logtau,
 #        Pi0=[6., 0.6, 1., 0.5],
         reverse=True,
-        heating = 'alpha',
+        heating = (15., 0.),
         transfer = 'scattering',
 #        opacity = (1., 2.5),
     )
     print( fp.getPi() )
-    #plot_to_file(fp, dlogTdlogP=True, entropy=False)
-    for heating in ('alpha', 'ion'):
-        plot_four_for_paper(heating)
+    plot_to_file(fp, dlogTdlogP=True, entropy=False)
+    #for heating in ('alpha', 'ion'):
+    #    plot_four_for_paper(heating)
