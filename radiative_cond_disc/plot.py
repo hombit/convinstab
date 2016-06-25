@@ -6,7 +6,8 @@ from matplotlib import rc
 from vertstr import *
 from fractions import Fraction
 
-
+rc('ps', fonttype=42)
+rc('pdf', fonttype=42)
 rc('text', usetex=True)
 
 _dashes = [
