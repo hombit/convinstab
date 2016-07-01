@@ -1,11 +1,24 @@
 #!/usr/bin/env python3
 
 
+import argparse
 import numpy as np
 from copy import copy
 from enum import IntEnum
 from numbers import Integral, Real
 from scipy import optimize, integrate, interpolate
+
+
+class _TestAction(argparse._StoreTrueAction):
+    '''
+    argparse Action for test running
+    '''
+    def __call__(self, parser, namespace, values, option_string=None):
+        import doctest
+        print('Running doctest...')
+        doctest.testmod()
+        print('Test is OK')
+        parser.exit()
 
 
 class Vars(IntEnum):
@@ -477,5 +490,53 @@ class FindPi(object):
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    parser = argparse.ArgumentParser(description='Compute four Pi values')
+    parser.add_argument(
+        '-T', '--test',
+        dest = 'test',
+        action = _TestAction,
+        help = 'run tests and exit',
+    )
+    parser.add_argument(
+        'tau',
+        action = 'store',
+        type = float,
+        default = 1e6,
+        help = 'value of free parameter (tau0 for --transfer=absorption or delta for --transfer=scattering)',
+    )
+    parser.add_argument(
+        '-e', '--heating',
+        dest = 'heating',
+        choices = ['alpha', 'const', 'ion'],
+        default = 'alpha',
+        help = 'type of energy release',
+    )
+    parser.add_argument(
+        '-c', '--transfer',
+        dest = 'transfer',
+        choices = ['absorption', 'scattering'],
+        default = 'absorption',
+        help = 'main process in radiative conductivity',
+    )
+    parser.add_argument(
+        '-o', '--opacity',
+        dest = 'opacity',
+        action = 'store',
+        nargs = 2,
+        type = float,
+        metavar = ('VARSIGMA', 'PSI'),
+        help = "parameters of opacity law: varkappa ~ rho^varsigma / t^psi, default is Kramer's law (1 3.5) for --transfer=absorption and Thomson scattering (0 0) for --transfer=scattering",
+    )
+    args = parser.parse_args()
+
+    fp = FindPi(
+        args.tau,
+        heating = args.heating,
+        transfer = args.transfer,
+        opacity = args.opacity
+    )
+    try:
+        Pi = fp.getPi()
+        print( '\n'.join( 'Pi{} = {:.5f}'.format(i+1, p) for i, p in enumerate(Pi) ) )
+    except RuntimeError:
+        print("Sorry, Pi hasn't calculated. Try another arguments")

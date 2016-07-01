@@ -18,7 +18,8 @@ The notebook provides three figures:
 Folder [`radiative_cond_disc`](https://github.com/hombit/convinstab/tree/master/radiative_cond_disc) is corresponding to Section 3 of MPS2016.
 
 Module [`vertstr`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/vertstr.py) contains class `FindPi` that solves system of ODEs similar to Ketsaris and Shakura (1998).
-For example following code provides values of Pi1, Pi2, Pi3 and Pi4 for alpha-disc with Kramer's opacity law and value of free paramter `τ0` equals 100:
+It can be used as standalone script to obtain Pi values, get help by typing ```python3 radiative_cond_disc/vertstr.py --help``` from repo root.
+This module provides values of Pi1, Pi2, Pi3 and Pi4 for alpha-disc with Kramer's opacity law and value of free paramter `τ0` equals 100:
 ```python
 from vertstr import FindPi
 fp = FindPi(100)
