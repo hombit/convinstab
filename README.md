@@ -11,14 +11,14 @@ Full list of requirements is listed in [`radiative_cond_disc/requirements.txt`](
 Jupyter notebook [`heat_cond_disc.ipynb`](https://github.com/hombit/convinstab/blob/master/heat_cond_disc.ipynb) is corresponding to Section 2 of MSP2016.
 The notebook provides three figures:
   - Vertical distribution of dimensionless temperature `θ(x)`. This is Fig. 1 from MPS2016.
-  - Size of the laminar zone for different Prandtl numbers and constant `a` and `b`.
-  - Dependence of thickness parameter ξ on Prandtl number Pr for constant `a` and `b`.
+  - Size of the laminar zone for different Prandtl numbers `Pr` and constant `a` and `b`.
+  - Dependence of thickness parameter `ξ` on Prandtl number `Pr` for constant `a` and `b`.
   
 ### Radiative heat conductivity
-Folder [`radiative_cond_disc`](https://github.com/hombit/convinstab/tree/master/radiative_cond_disc) is corresponding to Section 3 of MPS2016 and it is strucuated as Python package.
+Folder [`radiative_cond_disc`](https://github.com/hombit/convinstab/tree/master/radiative_cond_disc) is corresponding to Section 3 of MPS2016.
 
 Module [`vertstr`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/vertstr.py) contains class `FindPi` that solves system of ODEs similar to Ketsaris and Shakura (1998).
-For example following code provides values of Pi1, Pi2, Pi3 and Pi4 for alpha-disc with Kramer's opacity law and value of free paramter τ0 equals 100:
+For example following code provides values of Pi1, Pi2, Pi3 and Pi4 for alpha-disc with Kramer's opacity law and value of free paramter `τ0` equals 100:
 ```python
 from vertstr import FindPi
 fp = FindPi(100)
@@ -31,7 +31,7 @@ pydoc3 vertstr
 
 Module [`plot`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/plot.py) contains functions used to plot vertical distributions of dimensionless variables (Fig. 2 and 3 in MPS2016).
 
-Jupyter notebook [`dlogTdlogP.ipynb`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/dlogTdlogP.ipynb) contains figure shows dependence of symmetry plane value of d log(T) / d log(P) on parameter `b` in the case of `d = 0`.
+Jupyter notebook [`radiative_cond_disc.ipynb`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc.ipynb) contains figure shows dependence of symmetry plane value of `d log(T) / d log(P)` on parameter `b` in the case of `d = 0`.
 
 
 ## Licence
