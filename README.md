@@ -32,7 +32,7 @@ pydoc3 vertstr
 
 Module [`plot`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/plot.py) contains functions used to plot vertical distributions of dimensionless variables (Fig. 2 and 3 in MPS2016).
 
-Jupyter notebook [`radiative_cond_disc.ipynb`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc.ipynb) contains figure shows dependence of symmetry plane value of `d log(T) / d log(P)` on parameter `b` in the case of `d = 0`.
+Jupyter notebook [`dlogTdlogP_b.ipynb`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/dlogTdlogP_b.ipynb) contains figure shows dependence of symmetry plane value of `d log(T) / d log(P)` on parameter `b` in the case of `d = 0`.
 
 
 ## Licence
