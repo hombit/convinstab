@@ -19,7 +19,7 @@ Folder [`radiative_cond_disc`](https://github.com/hombit/convinstab/tree/master/
 
 #### `radiative_cond_disc/vertstr.py`
 File [`vertstr.py`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/vertstr.py) contains class `FindPi` that solves system of ODEs similar to Ketsaris and Shakura (1998).
-This file can be used as script to obtain Pi values:
+This file can be used as script to obtain Pi1, Pi2, Pi3 and Pi4 values:
 ```shell
 $ python3 radiative_cond_disc/vertstr.py 1e2
 Pi1 = 4.98451
@@ -30,13 +30,13 @@ Pi4 = 0.39527
 Read script documentation with `--help` argument
 
 On other hand this file can be used as module.
-This code provides values of Pi1, Pi2, Pi3 and Pi4 for alpha-disc with Kramer's opacity law and value of free paramter `τ0` equals 100:
+This code does the same calculations as above example of script usage (alpha-disc with Kramer's opacity law and value of free paramter `τ0` equals 100):
 ```python
 from vertstr import FindPi
 fp = FindPi(100)
 Pi = fp.getPi()
 ```
-The code of `vertstr` is documented with [docstrings](https://www.python.org/dev/peps/pep-0257/), you can view documentation in your terminal or browser using [pydoc](https://docs.python.org/3/library/pydoc.html):
+The code of `vertstr` is documented with [docstrings](https://www.python.org/dev/peps/pep-0257/), you can view documentation in your terminal or web-browser using [pydoc](https://docs.python.org/3/library/pydoc.html):
 ```shell
 $ pydoc3 vertstr
 Help on module vertstr:
