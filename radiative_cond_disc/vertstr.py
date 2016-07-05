@@ -51,7 +51,7 @@ def _pipe_redirected(to=os.devnull, pipe=sys.stdout):
             yield pipe # allow code to be run with the redirected pipe
         finally:
             # restore pipe to its previous value
-            #NOTE: dup2 makes pipe_fd inheritable unconditionally
+            # dup2 makes pipe_fd inheritable unconditionally
             pipe.flush()
             os.dup2(copied.fileno(), pipe_fd)  # $ exec >&copied
 
