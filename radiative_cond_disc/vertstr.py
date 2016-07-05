@@ -2,6 +2,9 @@
 
 
 import argparse
+import contextlib
+import os
+import sys
 import numpy as np
 from copy import copy
 from enum import IntEnum
@@ -19,6 +22,38 @@ class _TestAction(argparse._StoreTrueAction):
         doctest.testmod()
         print('Test is OK')
         parser.exit()
+
+def _fileno(file_or_fd):
+    '''
+    Get fileno of file of file descriptor
+    '''
+    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
+    if not isinstance(fd, int):
+        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
+    return fd
+
+@contextlib.contextmanager
+def _pipe_redirected(to=os.devnull, pipe=sys.stdout):
+    """
+    Redirect output. Useful to hide scipy output.
+    Source: http://stackoverflow.com/a/22434262/190597 (J.F. Sebastian)
+    """
+    pipe_fd = _fileno(pipe)
+    # copy pipe_fd before it is overwritten
+    with os.fdopen(os.dup(pipe_fd), 'wb') as copied: 
+        pipe.flush()  # flush library buffers that dup2 knows nothing about
+        try:
+            os.dup2(_fileno(to), pipe_fd)  # $ exec >&to
+        except ValueError:  # filename
+            with open(to, 'wb') as to_file:
+                os.dup2(to_file.fileno(), pipe_fd)  # $ exec > to
+        try:
+            yield pipe # allow code to be run with the redirected pipe
+        finally:
+            # restore pipe to its previous value
+            #NOTE: dup2 makes pipe_fd inheritable unconditionally
+            pipe.flush()
+            os.dup2(copied.fileno(), pipe_fd)  # $ exec >&copied
 
 
 class Vars(IntEnum):
@@ -536,7 +571,9 @@ if __name__ == '__main__':
         opacity = args.opacity
     )
     try:
-        Pi = fp.getPi()
+        with _pipe_redirected():
+            with _pipe_redirected(pipe=sys.stderr):
+                Pi = fp.getPi()
         print( '\n'.join( 'Pi{} = {:.5f}'.format(i+1, p) for i, p in enumerate(Pi) ) )
     except RuntimeError:
         print("Sorry, Pi hasn't calculated. Try another arguments")
