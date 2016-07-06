@@ -19,8 +19,9 @@ class _TestAction(argparse._StoreTrueAction):
     def __call__(self, parser, namespace, values, option_string=None):
         import doctest
         print('Running doctest...')
-        doctest.testmod()
-        print('Test is OK')
+        testresult = doctest.testmod()
+        if testresult.failed == 0:
+            print('Test is OK')
         parser.exit()
 
 def _fileno(file_or_fd):
