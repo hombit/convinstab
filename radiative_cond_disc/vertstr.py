@@ -128,6 +128,9 @@ class FindPi(object):
     __Pi0 = np.array( [5, 0.5, 1, 0.4] )
     _Pi0 = __Pi0
 
+    __Pi_bounds = np.array([[0.1, 10.]] * lenVars)
+    _Pi_bounds = __Pi_bounds
+
     __doc__ = '''
     Solver of the system of dimensionless vertical structure ODEs similar to
     the system in Ketsaris, Shakura (1998) (KS1998). The system contains four
@@ -149,6 +152,9 @@ class FindPi(object):
     Pi0 : array_like, optional
         Initial guess. Default is typical values from KS1998:
         ``{Pi0}``
+    Pi_bounds : array_like, optional
+        Four pairs of boundaries where search Pi values. Default is:
+        ``{Pi_bounds}``
     reverse : bool, optional
         Specifies direction of ODEs integration. If False than integrate from
         `sigma` = 0 to `sigma` = 1 (from plane of symmetry to photosphere), if
@@ -237,11 +243,12 @@ class FindPi(object):
     >>> Pi = fp.getPi()
     >>> print( np.round(Pi, decimals=3) )
     [ 2.632  0.737  0.996  0.418]
-    '''.format(Pi0=__Pi0)
+    '''.format(Pi0=__Pi0, Pi_bounds=__Pi_bounds)
 
     def __init__(self, 
         tau,
         Pi0 = None,
+        Pi_bounds = None,
         reverse = True,
         heating = 'alpha',
         transfer = 'absorption',
@@ -254,6 +261,9 @@ class FindPi(object):
 
         if Pi0 is not None:
             self.__Pi0 = Pi0
+
+        if Pi_bounds is not None:
+            self.__Pi_bounds = Pi_bounds
 
         if heating == 'alpha':
             self.__b = 0.
@@ -473,7 +483,7 @@ class FindPi(object):
         opt_res = optimize.minimize(
             self._discrepancy,
             self.__Pi0,
-            bounds = ((0.1, 10,),) * lenVars
+            bounds = self.__Pi_bounds
         )
         
         if opt_res.status == 0:
