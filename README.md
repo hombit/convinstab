@@ -62,3 +62,22 @@ Jupyter notebook [`dlogTdlogP_b.ipynb`](https://github.com/hombit/convinstab/blo
 Copyright (c) 2016, Konstantin L. Malanchev
 
 Please, accompany any results obtained using this code with reference to Malanchev, Postnov and Shakura (2016) [arXiv:1609.03799](http://arxiv.org/abs/1609.03799)
+
+
+## BibTex
+```bibtex
+@ARTICLE{2016arXiv160903799M,
+   author = {{Malanchev}, K.~L. and {Postnov}, K.~A. and {Shakura}, N.~I.
+	},
+    title = "{Convection in axially symmetric accretion discs with microscopic transport coefficients}",
+  journal = {ArXiv e-prints},
+archivePrefix = "arXiv",
+   eprint = {1609.03799},
+ primaryClass = "astro-ph.HE",
+ keywords = {Astrophysics - High Energy Astrophysical Phenomena, Physics - Fluid Dynamics},
+     year = 2016,
+    month = sep,
+   adsurl = {http://adsabs.harvard.edu/abs/2016arXiv160903799M},
+  adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
