@@ -60,7 +60,7 @@ def _pipe_redirected(to=os.devnull, pipe=sys.stdout):
 class Vars(IntEnum):
     '''
     Enumerate that contains names of unknown functions.
-    All functions are dimensionless, for more info look KS1998.
+    All functions are dimensionless, for more info see KS1998.
     
     Attributes
     ----------
@@ -105,7 +105,7 @@ def entropy_tp(t, p):
 
 def dlogT_dlogP(t, p):
     '''
-    Logarithmic derivate of temperature of pressure
+    Logarithmic derivative of the temperature of the pressure
 
     Parameters
     ----------
