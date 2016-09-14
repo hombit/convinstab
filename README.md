@@ -58,7 +58,7 @@ Module [`plot`](https://github.com/hombit/convinstab/blob/master/radiative_cond_
 Jupyter notebook [`dlogTdlogP_b.ipynb`](https://github.com/hombit/convinstab/blob/master/radiative_cond_disc/dlogTdlogP_b.ipynb) contains a figure that shows the dependence of symmetry plane value of *`d log(T) / d log(P)`* on the viscosity parameter *`b`* in the case of ion heat conductivity *`(d = 0)`*.
 
 
-## License
+## Licence
 Copyright (c) 2016, Konstantin L. Malanchev
 
 Please, accompany any results obtained using this code with reference to Malanchev, Postnov and Shakura (2016) [arXiv:1609.03799](http://arxiv.org/abs/1609.03799)
