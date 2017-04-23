@@ -140,7 +140,7 @@ class FindPi(object):
     argument is dimensionless mass coordinate sigma. The system contains eight
     first-type boundary conditions (two for each function) and four unknown
     parameters `Pi`. These unknown parameters depend on one free parameter
-    `tau`. The result of the solution is values of this four parameters Pi
+    `tau`. The result of the solution is values of these four parameters Pi
     (method `getPi`) and distributions of four unknown functions (method
     `pzqt`).
 
