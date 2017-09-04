@@ -217,7 +217,8 @@ class FindPi(object):
     dlogTdlogP_centr()
         Value of d log T / d log P in the plane of symmetry of the disc.
     pzqt(sigma=1000)
-        Distribution of unknown functions on `sigma`.
+        Distribution of unknown functions on `sigma`, returns tuple
+        (sigma, pzqt)
 
     Notes
     -----
@@ -355,6 +356,13 @@ class FindPi(object):
     def psi(self):
         'From opacity law varkappa ~ rho^varsigma / t^psi'
         return self.__psi
+
+    @property
+    def _f_tau2over3(self):
+        'Value of magic integral, only for absorption'
+        if self.__transfer != 'absorption':
+            raise AttributionError('_f_tau2over3 is determined only for absorption-dominated transfer')
+        return self.__f_tau2over3
 
     @property
     def y0(self):
