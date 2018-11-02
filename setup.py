@@ -13,5 +13,6 @@ setup(
     description='Semi-analytical solution of accretion disk vertical structure equations',
     package_dir={'': 'radiative_cond_disc'},
     py_modules=['vertstr'],
+    entry_points={'console_scripts': ['vertstr=vertstr:main']},
     install_requires=['numpy>=0.11', 'scipy>=0.17'],
 )

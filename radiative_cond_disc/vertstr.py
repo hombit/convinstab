@@ -540,10 +540,7 @@ class FindPi(object):
         return sigma, ys
 
 
-###################
-
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Compute four Pi values')
     parser.add_argument(
         '-T', '--test',
@@ -596,3 +593,7 @@ if __name__ == '__main__':
         print( '\n'.join( 'Pi{} = {:.5f}'.format(i+1, p) for i, p in enumerate(Pi) ) )
     except RuntimeError:
         print("Sorry, Pi hasn't calculated. Try another arguments")
+
+
+if __name__ == '__main__':
+    main()
