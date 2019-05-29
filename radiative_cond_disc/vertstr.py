@@ -13,21 +13,22 @@ from scipy import optimize, integrate, interpolate
 
 
 class _TestAction(argparse._StoreTrueAction):
-    '''
+    """
     argparse Action for test running
-    '''
+    """
     def __call__(self, parser, namespace, values, option_string=None):
         import doctest
+
         print('Running doctest...')
-        testresult = doctest.testmod()
+        testresult = doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
         if testresult.failed == 0:
             print('Test is OK')
         parser.exit()
 
 def _fileno(file_or_fd):
-    '''
+    """
     Get fileno of file of file descriptor
-    '''
+    """
     fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
     if not isinstance(fd, int):
         raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
@@ -58,7 +59,7 @@ def _pipe_redirected(to=os.devnull, pipe=sys.stdout):
 
 
 class Vars(IntEnum):
-    '''
+    """
     Enumerate that contains names of unknown functions.
     All functions are dimensionless, for more info see KS1998.
     
@@ -72,7 +73,7 @@ class Vars(IntEnum):
         Flux of energy
     t
         Temperature
-    '''
+    """
     p = 0
     z = 1
     q = 2
@@ -84,7 +85,7 @@ lenVars = len(Vars.__members__)
 
 
 def entropy_tp(t, p):
-    '''
+    """
     Dimensionless entropy from temperate and pressure.
     Output array is normalized on its maximum absolute value
 
@@ -98,13 +99,13 @@ def entropy_tp(t, p):
     Returns
     -------
     array
-    '''
+    """
     s = 2.5 * np.log(t) - np.log(p)
     s /= np.max( np.abs(s) )
     return s
 
 def dlogT_dlogP(t, p):
-    '''
+    """
     Logarithmic derivative of the temperature of the pressure
 
     Parameters
@@ -117,7 +118,7 @@ def dlogT_dlogP(t, p):
     Returns
     -------
     array_like
-    '''
+    """
     logp = np.log(p)
     tck = interpolate.splrep( logp, np.log(t), k=1 )
     dlogdlog = interpolate.splev( logp, tck, der=1 )
@@ -132,7 +133,7 @@ class FindPi(object):
     __Pi_bounds = np.array([[0.1, 10.]] * lenVars)
     _Pi_bounds = __Pi_bounds
 
-    __doc__ = '''
+    __doc__ = """
     Solver of the system of dimensionless vertical structure ODEs similar to
     the system in Ketsaris, Shakura (1998) (KS1998). The system contains four
     linear differential equations for four unknown variables: pressure p,
@@ -146,10 +147,13 @@ class FindPi(object):
 
     Parameters
     ----------
-    tau : positive float, optional
+    tau : float
         Free parameter of the problem. It corresponds to tau_0 for
         ``absorption`` transfer and delta for ``scattering`` transfer from
         KS1998.
+    gas2tot : float, optional
+        Ratio of gas pressure to total (gas + radiation) pressure in the
+        plane of symmetry, free parameter of the problem. Default is unity
     Pi0 : array_like, optional
         Initial guess. Default is typical values from KS1998:
         ``{Pi0}``
@@ -233,7 +237,7 @@ class FindPi(object):
     >>> fp = FindPi(100)
     >>> Pi = fp.getPi()
     >>> print( np.round(Pi, decimals=3) )
-    [ 4.985  0.576  1.126  0.395]
+    [4.985 0.576 1.126 0.395]
     
     For some parameters we have to set initial guess Pi0:
     >>> fp = FindPi(
@@ -244,19 +248,21 @@ class FindPi(object):
     ... )
     >>> Pi = fp.getPi()
     >>> print( np.round(Pi, decimals=3) )
-    [ 2.632  0.737  0.996  0.418]
-    '''.format(Pi0=__Pi0, Pi_bounds=__Pi_bounds)
+    [2.632 0.737 0.996 0.418]
+    """.format(Pi0=__Pi0, Pi_bounds=__Pi_bounds)
 
     def __init__(self, 
         tau,
-        Pi0 = None,
-        Pi_bounds = None,
-        reverse = True,
-        heating = 'alpha',
-        transfer = 'absorption',
-        opacity = None
+        gas2tot=1.,
+        Pi0=None,
+        Pi_bounds=None,
+        reverse=True,
+        heating='alpha',
+        transfer='absorption',
+        opacity=None
     ):
         self.__tau = tau
+        self.__gas2tot = gas2tot
         self.__reverse = reverse
         self.__heating = heating
         self.__transfer = transfer
@@ -320,6 +326,10 @@ class FindPi(object):
         return self.__tau
 
     @property
+    def gas2tot(self):
+        return self.__gas2tot
+
+    @property
     def Pi0(self):
         return copy(self.__Pi0)
 
@@ -375,7 +385,7 @@ class FindPi(object):
         return copy(self.__Pi)
 
     def _derivatives(self, y, sigma, Pi):
-        '''
+        """
         Right side of ODEs. See KS1998 for heating 'alpha' or 'const'
 
         Parameters
@@ -389,16 +399,27 @@ class FindPi(object):
         Returns
         -------
         array
-        '''
+        """
         dy = np.empty(lenVars)
         dy[Vars.p] = -Pi[0] * Pi[1] * y[Vars.z]
-        dy[Vars.z] = Pi[1] * y[Vars.t] / y[Vars.p]
-        dy[Vars.q] = Pi[2] * y[Vars.t]**(self.__b+1) * y[Vars.p]**(self.__d-1)
-        dy[Vars.t] = -Pi[3] * y[Vars.q] * y[Vars.p]**(self.__varsigma) / y[Vars.t]**(self.__psi+self.__varsigma+3)
+        dy[Vars.z] = (
+            Pi[1] * self.__gas2tot
+            / (y[Vars.p] / y[Vars.t] - (1-self.__gas2tot) * y[Vars.t]**3)
+        )
+        dy[Vars.q] = (
+            Pi[2] * self.__gas2tot
+            * y[Vars.t]**(self.__b+1)
+            * (y[Vars.p] - (1-self.__gas2tot) * y[Vars.t]**4)**(self.__d-1)
+        )
+        dy[Vars.t] = (
+            -Pi[3] * self.__gas2tot
+            * y[Vars.q] / y[Vars.t]**(self.__psi+3)
+            * (y[Vars.p] / y[Vars.t] - (1-self.__gas2tot) * y[Vars.t]**3)**(self.__varsigma)
+        )
         return dy
 
     def _y1(self, Pi):
-        '''
+        """
         Right boundary conditions. See KS1998
 
         Parameters
@@ -408,7 +429,7 @@ class FindPi(object):
         Returns
         -------
         array
-        '''
+        """
         y1 = np.empty(lenVars)
         
         y1[Vars.z] = 1
@@ -431,7 +452,7 @@ class FindPi(object):
         return y1
 
     def _integrate(self, Pi, sigma=None):
-        '''
+        """
         Integrate ODEs and returns values at pints described in `sigma`
 
         Parameters
@@ -448,7 +469,7 @@ class FindPi(object):
         array
             Array containing the value of `y` for each point described in
             `sigma`.
-        '''
+        """
         if sigma is None:
             sigma = self.__sigma
         
@@ -466,10 +487,10 @@ class FindPi(object):
         return ys
 
     def _discrepancy(self, Pi):
-        '''
+        """
         Discrepancy between values of `y` described in boundary condition and
         received from `_integrate`.
-        '''
+        """
 
         if self.__reverse:
             return np.sum( (self._integrate(Pi)[-1] - self.__y0)**2 ) / lenVars
@@ -477,7 +498,7 @@ class FindPi(object):
             return np.sum( (self._integrate(Pi)[-1] - self._y1(Pi))**2 ) / lenVars
 
     def getPi(self):
-        '''
+        """
         Solve optimization problem and returns array with parameters Pi.
         Raise RuntimeError if optimization failed.
 
@@ -485,31 +506,32 @@ class FindPi(object):
         -------
         array
             Values of unknown parameters Pi
-        '''
+        """
         if self.__Pi is not None:
             return self.__Pi
 
         opt_res = optimize.minimize(
             self._discrepancy,
             self.__Pi0,
-            bounds = self.__Pi_bounds
+            bounds=self.__Pi_bounds,
         )
         
-        if opt_res.status == 0:
-            self.__Pi = opt_res.x
-            return self.__Pi
-        else:
+        if opt_res.status != 0:
             raise RuntimeError('Cannon solve optimization problem. Corresponding OptimizeResult is\n{}'.format(opt_res))
+        if opt_res.fun > 1e-8:
+            raise RuntimeError('Discrepancy is too large: {}'.format(opt_res.fun))
+        self.__Pi = opt_res.x
+        return self.__Pi
 
     def dlogTdlogP_centr(self):
-        '''
+        """
         Return value of d log T / d log P at the plane of symmetry of the disc.
-        '''
+        """
         Pi = self.getPi()
         return Pi[2] * Pi[3] / ( Pi[0] * Pi[1]**2 )
 
     def pzqt(self, sigma=1000):
-        '''
+        """
         Distribution of unknown functions on `sigma`.
 
         Parameters
@@ -527,7 +549,7 @@ class FindPi(object):
             Array with `sigma` values
         array, shape(n, len(Pi))
             Array with corresponding values of unknown functions
-        '''
+        """
         if isinstance(sigma, Integral):
             if self.__reverse:
                 sigma = np.linspace(1, 0, sigma)
@@ -552,8 +574,14 @@ def main():
         'tau',
         action = 'store',
         type = float,
-        default = 1e6,
         help = 'value of free parameter (tau0 for --transfer=absorption or delta for --transfer=scattering)',
+    )
+    parser.add_argument(
+        '-g', '--gas2tot',
+        action = 'store',
+        type = float,
+        default = 1,
+        help = 'ratio of gas and total pressure in the plane of symmetry',
     )
     parser.add_argument(
         '-e', '--heating',
@@ -582,6 +610,7 @@ def main():
 
     fp = FindPi(
         args.tau,
+        gas2tot = args.gas2tot,
         heating = args.heating,
         transfer = args.transfer,
         opacity = args.opacity
@@ -591,8 +620,9 @@ def main():
             with _pipe_redirected(pipe=sys.stderr):
                 Pi = fp.getPi()
         print( '\n'.join( 'Pi{} = {:.5f}'.format(i+1, p) for i, p in enumerate(Pi) ) )
-    except RuntimeError:
-        print("Sorry, Pi hasn't calculated. Try another arguments")
+    except RuntimeError as e:
+        print("Sorry, Pi values haven't calculated. Try another arguments")
+        print('Details: {}'.format(e))
 
 
 if __name__ == '__main__':
